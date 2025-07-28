@@ -22,6 +22,6 @@
     },
     "dependencies": {
         "leaflet": "^1.9.4",
-        "vue-leaflet": "^0.1.0"
+        "@vue-leaflet/vue-leaflet": "^0.10.1"
     }
 }

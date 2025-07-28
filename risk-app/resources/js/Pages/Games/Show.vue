@@ -46,6 +46,16 @@ const myTerritories = computed(() => {
 });
 
 // --- Methods ---
+function doClaimTerritory(territoryId) {
+    if (props.game.turn_phase !== 'claim' || !isMyTurn.value) return;
+    console.log('[Show.vue] Claiming territory:', territoryId);
+    router.post(route('game.action.claim', props.game.id), {
+        territory_id: territoryId,
+    }, {
+        preserveScroll: true,
+    });
+}
+
 function doReinforce(reinforcementsPayload) {
     console.log('[Show.vue] Received reinforce event with payload:', reinforcementsPayload);
     router.post(route('game.action.reinforce', props.game.id), {
@@ -148,6 +158,7 @@ onUnmounted(() => clearInterval(pollInterval));
                         :map-data="map"
                         :territory-state="territoryStateMap"
                         :players="game.players"
+                        @territory-click="doClaimTerritory"
                     />
                 </div>
             </main>

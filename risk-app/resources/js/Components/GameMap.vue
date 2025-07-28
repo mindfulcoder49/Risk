@@ -17,6 +17,8 @@ const props = defineProps({
     players: Array,
 });
 
+const emit = defineEmits(['territory-click']);
+
 const markersToRender = computed(() => {
     if (!props.mapData?.territories || !props.territoryState) {
         return [];
@@ -62,6 +64,13 @@ const geoJsonOptions = computed(() => ({
         layer.bindTooltip(feature.properties.name, {
             permanent: false,
             sticky: true,
+        });
+        // Add a click listener
+        layer.on({
+            click: () => {
+                console.log(`[GameMap.vue] Clicked on ${feature.properties.name} (ID: ${feature.properties.id})`);
+                emit('territory-click', feature.properties.id);
+            }
         });
     }
 }));

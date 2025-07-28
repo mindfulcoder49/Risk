@@ -101,37 +101,10 @@ class GameController extends Controller
             // 1. Set game status to 'playing'.
             $game->status = 'playing';
 
-            // 2. Randomly assign all territories to players.
-            $territories = Territory::all()->shuffle();
+            // 2. Set the turn to the player with turn_order 1 and phase to 'claim'.
             $players = $game->players()->orderBy('turn_order')->get();
-            $gameTerritories = [];
-            $i = 0;
-            foreach ($territories as $territory) {
-                $gameTerritories[] = [
-                    'game_id' => $game->id,
-                    'territory_id' => $territory->id,
-                    'player_id' => $players[$i % $playerCount]->id,
-                    'armies' => 1, // 3. Place 1 army on each territory.
-                ];
-                $i++;
-            }
-            GameTerritory::insert($gameTerritories);
-
-            // 4. Distribute remaining starting armies.
-            $startingArmies = [2 => 40, 3 => 35, 4 => 30, 5 => 25, 6 => 20][$playerCount];
-            foreach ($players as $player) {
-                $territoriesOwnedCount = GameTerritory::where('game_id', $game->id)->where('player_id', $player->id)->count();
-                $armiesToDistribute = $startingArmies - $territoriesOwnedCount;
-
-                $ownedTerritories = GameTerritory::where('game_id', $game->id)->where('player_id', $player->id)->get();
-                for ($j = 0; $j < $armiesToDistribute; $j++) {
-                    $ownedTerritories->random()->increment('armies');
-                }
-            }
-
-            // 5. Set the turn to the player with turn_order 1 and phase to 'reinforce'.
             $game->current_turn_player_id = $players->first()->id;
-            $game->turn_phase = 'reinforce';
+            $game->turn_phase = 'claim';
             $game->save();
         });
 

@@ -23,6 +23,62 @@ class GameActionController extends Controller
         return $player;
     }
 
+    public function claimTerritory(Request $request, Game $game)
+    {
+        $player = $this->authorizePlayer($game);
+        if ($game->turn_phase !== 'claim') {
+            abort(403, 'Not in claim phase.');
+        }
+
+        $validated = $request->validate([
+            'territory_id' => 'required|integer|exists:territories,id',
+        ]);
+
+        // Check if territory is already claimed
+        $isClaimed = GameTerritory::where('game_id', $game->id)
+            ->where('territory_id', $validated['territory_id'])
+            ->exists();
+
+        if ($isClaimed) {
+            return back()->withErrors(['claim' => 'This territory is already claimed.']);
+        }
+
+        DB::transaction(function () use ($game, $player, $validated) {
+            // Claim the territory
+            GameTerritory::create([
+                'game_id' => $game->id,
+                'player_id' => $player->id,
+                'territory_id' => $validated['territory_id'],
+                'armies' => 1,
+            ]);
+
+            // Check if all territories are now claimed
+            $totalTerritories = \App\Models\Territory::count();
+            $claimedTerritories = $game->gameTerritories()->count();
+
+            if ($claimedTerritories >= $totalTerritories) {
+                // All territories claimed, move to setup reinforcement phase
+                $firstPlayer = $game->players()->orderBy('turn_order')->first();
+                $game->update([
+                    'turn_phase' => 'setup_reinforce',
+                    'current_turn_player_id' => $firstPlayer->id,
+                ]);
+            } else {
+                // Advance to the next player
+                $nextPlayer = $game->players()
+                    ->where('turn_order', '>', $player->turn_order)
+                    ->orderBy('turn_order')
+                    ->first() ?? $game->players()->orderBy('turn_order')->first();
+
+                $game->update([
+                    'current_turn_player_id' => $nextPlayer->id,
+                ]);
+            }
+        });
+
+        return back();
+    }
+
     public function reinforce(Request $request, Game $game)
     {
         $player = $this->authorizePlayer($game);

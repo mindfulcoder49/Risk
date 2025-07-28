@@ -139,8 +139,21 @@ watch(() => fortifyForm.from, () => {
 
         <!-- PLAYING -->
         <div v-else-if="isMyTurn" class="flex-grow flex flex-col">
+            <!-- CLAIM -->
+            <div v-if="phase === 'claim'" class="space-y-4">
+                <h4 class="font-bold">Claim Phase</h4>
+                <p>Click on an unowned territory on the map to claim it.</p>
+            </div>
+
+            <!-- SETUP REINFORCE -->
+            <div v-else-if="phase === 'setup_reinforce'" class="space-y-4">
+                <h4 class="font-bold">Placement Phase</h4>
+                <p>Place your remaining armies on your territories.</p>
+                <!-- @todo: Implement setup reinforcement form -->
+            </div>
+
             <!-- REINFORCE -->
-            <div v-if="phase === 'reinforce'" class="space-y-4">
+            <div v-else-if="phase === 'reinforce'" class="space-y-4">
                 <h4 class="font-bold">Reinforcement Phase</h4>
                 <p>You have <span class="font-bold">{{ totalReinforcements }}</span> reinforcements to place.</p>
                 <p>Placed: {{ placedReinforcements }} / {{ totalReinforcements }}</p>
@@ -224,6 +237,7 @@ watch(() => fortifyForm.from, () => {
         <!-- NOT MY TURN -->
         <div v-else>
             <p class="text-center">It's not your turn.</p>
+            <p v-if="phase === 'claim'" class="text-center text-sm text-gray-500">Waiting for other players to claim territories.</p>
         </div>
     </div>
 </template>
