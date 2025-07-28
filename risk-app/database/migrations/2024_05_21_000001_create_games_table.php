@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->enum('status', ['waiting', 'playing', 'finished'])->default('waiting');
             $table->foreignId('current_turn_player_id')->nullable();
-            $table->enum('turn_phase', ['reinforce', 'attack', 'fortify'])->nullable();
+            $table->enum('turn_phase', ['reinforce', 'attack', 'fortify', 'claim'])->nullable();
             $table->foreignId('winner_player_id')->nullable();
             $table->timestamps();
         });
