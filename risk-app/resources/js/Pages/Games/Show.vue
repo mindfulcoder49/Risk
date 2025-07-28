@@ -53,6 +53,11 @@ function doClaimTerritory(territoryId) {
         territory_id: territoryId,
     }, {
         preserveScroll: true,
+        onSuccess: () => {
+            if (actionPanelRef.value) {
+                actionPanelRef.value.resetForms();
+            }
+        },
     });
 }
 
@@ -158,7 +163,6 @@ onUnmounted(() => clearInterval(pollInterval));
                         :map-data="map"
                         :territory-state="territoryStateMap"
                         :players="game.players"
-                        @territory-click="doClaimTerritory"
                     />
                 </div>
             </main>
@@ -176,7 +180,9 @@ onUnmounted(() => clearInterval(pollInterval));
                     :total-reinforcements="reinforcements"
                     :my-territories="myTerritories"
                     :territory-state-map="territoryStateMap"
+                    :map-data="map"
                     @start-game="doStartGame"
+                    @claim-territory="doClaimTerritory"
                     @reinforce="doReinforce"
                     @attack="doAttack"
                     @end-attack-phase="doEndAttackPhase"

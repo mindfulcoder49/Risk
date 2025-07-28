@@ -17,25 +17,28 @@ const props = defineProps({
     players: Array,
 });
 
-const emit = defineEmits(['territory-click']);
-
 const markersToRender = computed(() => {
-    if (!props.mapData?.territories || !props.territoryState) {
+    if (!props.mapData?.territories) {
         return [];
     }
+    // Render a marker for every territory that has coordinates, regardless of claim status.
     const markers = props.mapData.territories.filter(territory =>
-        props.territoryState.has(territory.id) &&
         territory.geo_data?.lat && territory.geo_data?.lng
     );
-    console.log(`--- [GameMap.vue] Calculated ${markers.length} army markers to render.`);
+    console.log(`--- [GameMap.vue] Calculated ${markers.length} total markers to render.`);
     return markers;
 });
 
-const getArmyIcon = (armyCount, color = '#000000', territoryName) => {
+const getArmyIcon = (territoryState, territoryName) => {
+    const armyCount = territoryState ? territoryState.armies : 0;
+    const color = territoryState ? territoryState.player.color : '#CCCCCC'; // Grey for unclaimed
+
+    const armyCountDisplay = `<div class="army-count-container" style="background-color: ${color};">${armyCount}</div>`;
+
     return divIcon({
         html: `
             <div class="army-marker-content">
-                <div class="army-count-container" style="background-color: ${color};">${armyCount}</div>
+                ${armyCountDisplay}
                 <div class="territory-name-label">${territoryName}</div>
             </div>
         `,
@@ -65,13 +68,6 @@ const geoJsonOptions = computed(() => ({
             permanent: false,
             sticky: true,
         });
-        // Add a click listener
-        layer.on({
-            click: () => {
-                console.log(`[GameMap.vue] Clicked on ${feature.properties.name} (ID: ${feature.properties.id})`);
-                emit('territory-click', feature.properties.id);
-            }
-        });
     }
 }));
 
@@ -98,8 +94,7 @@ const geoJsonOptions = computed(() => ({
              <l-marker
                 :lat-lng="[territory.geo_data.lat, territory.geo_data.lng]"
                 :icon="getArmyIcon(
-                    territoryState.get(territory.id).armies,
-                    territoryState.get(territory.id).player.color,
+                    territoryState.get(territory.id),
                     territory.name
                 )"
             >
@@ -134,6 +129,8 @@ const geoJsonOptions = computed(() => ({
     border: 2px solid white;
     box-shadow: 0 0 5px rgba(0,0,0,0.5);
     pointer-events: none; /* Allow clicks to pass through to the map */
+    /* Add a small margin to separate it from the name label */
+    margin-bottom: 2px;
 }
 .territory-name-label {
     margin-top: 4px;

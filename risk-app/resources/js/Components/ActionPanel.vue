@@ -9,10 +9,12 @@ const props = defineProps({
     totalReinforcements: Number,
     myTerritories: Array,
     territoryStateMap: Map,
+    mapData: Object, // Add mapData to props
 });
 
 const emit = defineEmits([
     'startGame',
+    'claimTerritory',
     'reinforce',
     'attack',
     'endAttackPhase',
@@ -21,12 +23,14 @@ const emit = defineEmits([
 ]);
 
 // --- Local State for Forms ---
+const claimForm = reactive({ territory_id: null });
 const reinforcementForm = reactive({});
 const attackForm = reactive({ from: null, to: null, armies: 1 });
 const fortifyForm = reactive({ from: null, to: null, armies: 1 });
 
 function resetForms(fullReset = true) {
     if (fullReset) {
+        claimForm.territory_id = null;
         Object.keys(reinforcementForm).forEach(key => delete reinforcementForm[key]);
         attackForm.from = null;
         fortifyForm.from = null;
@@ -42,6 +46,11 @@ defineExpose({
 });
 
 // --- Event Handlers ---
+function handleClaim() {
+    if (!claimForm.territory_id) return;
+    emit('claimTerritory', claimForm.territory_id);
+}
+
 function handleReinforce() {
     const payload = Object.entries(reinforcementForm)
         .filter(([, armies]) => parseInt(armies) > 0)
@@ -69,6 +78,12 @@ const placedReinforcements = computed(() => {
 });
 const canReinforce = computed(() => {
     return placedReinforcements.value === props.totalReinforcements && props.totalReinforcements > 0;
+});
+
+// --- Claim ---
+const unclaimedTerritories = computed(() => {
+    if (!props.mapData?.territories) return [];
+    return props.mapData.territories.filter(t => !props.territoryStateMap.has(t.id));
 });
 
 // --- Attack ---
@@ -142,7 +157,17 @@ watch(() => fortifyForm.from, () => {
             <!-- CLAIM -->
             <div v-if="phase === 'claim'" class="space-y-4">
                 <h4 class="font-bold">Claim Phase</h4>
-                <p>Click on an unowned territory on the map to claim it.</p>
+                <p>Select an unowned territory from the list to claim it.</p>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Unclaimed Territories:</span></label>
+                    <select v-model="claimForm.territory_id" class="select select-bordered">
+                        <option :value="null" disabled>Select a territory</option>
+                        <option v-for="t in unclaimedTerritories" :key="t.id" :value="t.id">
+                            {{ t.name }}
+                        </option>
+                    </select>
+                </div>
+                <button @click="handleClaim" :disabled="!claimForm.territory_id" class="btn btn-primary w-full">Claim Territory</button>
             </div>
 
             <!-- SETUP REINFORCE -->
