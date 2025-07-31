@@ -38,6 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // In-Game Actions
     // All actions are POST because they change game state
     Route::post('/games/{game}/claim', [GameActionController::class, 'claimTerritory'])->name('game.action.claim');
+    Route::post('/games/{game}/setup-reinforce', [GameActionController::class, 'placeSetupArmies'])->name('game.action.setupReinforce');
     Route::post('/games/{game}/reinforce', [GameActionController::class, 'reinforce'])->name('game.action.reinforce');
     Route::post('/games/{game}/attack', [GameActionController::class, 'attack'])->name('game.action.attack');
     Route::post('/games/{game}/fortify', [GameActionController::class, 'fortify'])->name('game.action.fortify');

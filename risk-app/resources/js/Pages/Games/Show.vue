@@ -11,6 +11,7 @@ const props = defineProps({
     game: Object,
     map: Object,
     reinforcements: Number,
+    setupArmies: Number,
     authPlayerData: Object,
     errors: Object,
     battleLog: Array,
@@ -51,6 +52,20 @@ function doClaimTerritory(territoryId) {
     console.log('[Show.vue] Claiming territory:', territoryId);
     router.post(route('game.action.claim', props.game.id), {
         territory_id: territoryId,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            if (actionPanelRef.value) {
+                actionPanelRef.value.resetForms();
+            }
+        },
+    });
+}
+
+function doPlaceSetupArmies(reinforcementsPayload) {
+    console.log('[Show.vue] Received setup reinforce event with payload:', reinforcementsPayload);
+    router.post(route('game.action.setupReinforce', props.game.id), {
+        reinforcements: reinforcementsPayload
     }, {
         preserveScroll: true,
         onSuccess: () => {
@@ -178,11 +193,13 @@ onUnmounted(() => clearInterval(pollInterval));
                     :phase="currentPhase"
                     :auth-player="authPlayer"
                     :total-reinforcements="reinforcements"
+                    :setup-armies="setupArmies"
                     :my-territories="myTerritories"
                     :territory-state-map="territoryStateMap"
                     :map-data="map"
                     @start-game="doStartGame"
                     @claim-territory="doClaimTerritory"
+                    @place-setup-armies="doPlaceSetupArmies"
                     @reinforce="doReinforce"
                     @attack="doAttack"
                     @end-attack-phase="doEndAttackPhase"

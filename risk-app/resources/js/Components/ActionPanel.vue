@@ -7,6 +7,7 @@ const props = defineProps({
     phase: String,
     authPlayer: Object,
     totalReinforcements: Number,
+    setupArmies: Number,
     myTerritories: Array,
     territoryStateMap: Map,
     mapData: Object, // Add mapData to props
@@ -15,6 +16,7 @@ const props = defineProps({
 const emit = defineEmits([
     'startGame',
     'claimTerritory',
+    'placeSetupArmies',
     'reinforce',
     'attack',
     'endAttackPhase',
@@ -24,6 +26,7 @@ const emit = defineEmits([
 
 // --- Local State for Forms ---
 const claimForm = reactive({ territory_id: null });
+const setupReinforcementForm = reactive({});
 const reinforcementForm = reactive({});
 const attackForm = reactive({ from: null, to: null, armies: 1 });
 const fortifyForm = reactive({ from: null, to: null, armies: 1 });
@@ -31,6 +34,7 @@ const fortifyForm = reactive({ from: null, to: null, armies: 1 });
 function resetForms(fullReset = true) {
     if (fullReset) {
         claimForm.territory_id = null;
+        Object.keys(setupReinforcementForm).forEach(key => delete setupReinforcementForm[key]);
         Object.keys(reinforcementForm).forEach(key => delete reinforcementForm[key]);
         attackForm.from = null;
         fortifyForm.from = null;
@@ -49,6 +53,16 @@ defineExpose({
 function handleClaim() {
     if (!claimForm.territory_id) return;
     emit('claimTerritory', claimForm.territory_id);
+}
+
+function handleSetupReinforce() {
+    const payload = Object.entries(setupReinforcementForm)
+        .filter(([, armies]) => parseInt(armies) > 0)
+        .map(([territory_id, armies]) => ({
+            territory_id: parseInt(territory_id),
+            armies: parseInt(armies)
+        }));
+    emit('placeSetupArmies', payload);
 }
 
 function handleReinforce() {
@@ -71,6 +85,14 @@ function handleFortify() {
     console.log('[ActionPanel] Emitting fortify:', fortifyForm);
     emit('fortify', { ...fortifyForm });
 }
+
+// --- Setup Reinforcement ---
+const placedSetupReinforcements = computed(() => {
+    return Object.values(setupReinforcementForm).reduce((sum, count) => sum + (parseInt(count) || 0), 0);
+});
+const canSetupReinforce = computed(() => {
+    return placedSetupReinforcements.value === props.setupArmies && props.setupArmies > 0;
+});
 
 // --- Reinforcement ---
 const placedReinforcements = computed(() => {
@@ -173,8 +195,17 @@ watch(() => fortifyForm.from, () => {
             <!-- SETUP REINFORCE -->
             <div v-else-if="phase === 'setup_reinforce'" class="space-y-4">
                 <h4 class="font-bold">Placement Phase</h4>
-                <p>Place your remaining armies on your territories.</p>
-                <!-- @todo: Implement setup reinforcement form -->
+                <p>You have <span class="font-bold">{{ setupArmies }}</span> armies to place.</p>
+                <p>Placed: {{ placedSetupReinforcements }} / {{ setupArmies }}</p>
+                <div class="space-y-2 max-h-64 overflow-y-auto p-2 border rounded">
+                    <div v-for="territory in myTerritories" :key="territory.id" class="form-control">
+                         <label class="label py-1">
+                            <span class="label-text">{{ territory.territory.name }} ({{ territory.armies }})</span>
+                        </label>
+                        <input type="number" min="0" v-model.number="setupReinforcementForm[territory.territory_id]" placeholder="0" class="input input-bordered input-sm w-full" />
+                    </div>
+                </div>
+                <button @click="handleSetupReinforce" :disabled="!canSetupReinforce" class="btn btn-primary w-full">Confirm Placements</button>
             </div>
 
             <!-- REINFORCE -->

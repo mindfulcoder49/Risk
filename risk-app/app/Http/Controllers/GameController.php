@@ -126,6 +126,14 @@ class GameController extends Controller
         // We need to transform the territory data into a format GeoJSON can easily use.
         $territories = Territory::with('adjacencies')->get();
 
+        $setupArmies = 0;
+        if ($game->turn_phase === 'setup_reinforce') {
+            $playerCount = $game->players()->count();
+            $startingArmies = [2 => 40, 3 => 35, 4 => 30, 5 => 25, 6 => 20][$playerCount];
+            $territoriesOwned = $game->currentTurnPlayer->gameTerritories()->count();
+            $setupArmies = $startingArmies - $territoriesOwned;
+        }
+
         return Inertia::render('Games/Show', [
             'game' => $game,
             'map' => [
@@ -133,6 +141,7 @@ class GameController extends Controller
             ],
             // We need to calculate this on the fly for the current player
             'reinforcements' => $this->calculateReinforcements($game),
+            'setupArmies' => $setupArmies,
             'authPlayerData' => [
                 'player' => $game->players()->where('user_id', Auth::id())->first()
             ],

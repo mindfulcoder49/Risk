@@ -79,6 +79,63 @@ class GameActionController extends Controller
         return back();
     }
 
+    public function placeSetupArmies(Request $request, Game $game)
+    {
+        $player = $this->authorizePlayer($game);
+        if ($game->turn_phase !== 'setup_reinforce') {
+            abort(403, 'Not in setup reinforcement phase.');
+        }
+
+        $validated = $request->validate([
+            'reinforcements' => 'required|array',
+            'reinforcements.*.territory_id' => 'required|integer|exists:territories,id',
+            'reinforcements.*.armies' => 'required|integer|min:1',
+        ]);
+
+        // Calculate how many armies the player should be placing
+        $playerCount = $game->players()->count();
+        $startingArmies = [2 => 40, 3 => 35, 4 => 30, 5 => 25, 6 => 20][$playerCount];
+        $territoriesOwned = $player->gameTerritories()->count();
+        $requiredArmies = $startingArmies - $territoriesOwned;
+
+        $requestedArmies = collect($validated['reinforcements'])->sum('armies');
+
+        if ($requestedArmies !== $requiredArmies) {
+            return back()->withErrors(['reinforcements' => 'You must place exactly ' . $requiredArmies . ' armies.']);
+        }
+
+        DB::transaction(function () use ($validated, $player, $game) {
+            foreach ($validated['reinforcements'] as $placement) {
+                $gameTerritory = GameTerritory::where('game_id', $game->id)
+                    ->where('territory_id', $placement['territory_id'])
+                    ->where('player_id', $player->id)
+                    ->firstOrFail();
+
+                $gameTerritory->increment('armies', $placement['armies']);
+            }
+
+            // Find the next player
+            $nextPlayer = $game->players()
+                ->where('turn_order', '>', $player->turn_order)
+                ->orderBy('turn_order')
+                ->first();
+
+            if ($nextPlayer) {
+                // Go to the next player's setup turn
+                $game->update(['current_turn_player_id' => $nextPlayer->id]);
+            } else {
+                // Last player finished, start the actual game
+                $firstPlayer = $game->players()->orderBy('turn_order')->first();
+                $game->update([
+                    'current_turn_player_id' => $firstPlayer->id,
+                    'turn_phase' => 'reinforce',
+                ]);
+            }
+        });
+
+        return back();
+    }
+
     public function reinforce(Request $request, Game $game)
     {
         $player = $this->authorizePlayer($game);
